@@ -16,13 +16,18 @@ module tt_um_example (
 
     // Bit-widths updated for experimental coefficients + intercepts
     wire signed [8:0] h0_raw, h2_raw, h3_raw;
-    reg signed [8:0] h0, h2, h3; // ReLU outputs
+    wire signed [8:0] h0, h2, h3; // ReLU outputs
     wire signed [13:0] e0, e1, e2, e3, e4, e5, e6, e7, e8, e9;
 
     // --- LAYER 1: New Hidden Weights + Intercepts (Scaled x10) ---
     assign h0_raw = (ui_in[0]?-3:0)+(ui_in[1]?-5:0)+(ui_in[3]?4:0)+(ui_in[4]?-1:0)+(ui_in[6]?-2:0);
     assign h2_raw = (ui_in[0]?28:0)+(ui_in[1]?19:0)+(ui_in[2]?-24:0)+(ui_in[3]?15:0)+(ui_in[4]?37:0)+(ui_in[5]?-37:0)+(ui_in[6]?29:0) + 5;
     assign h3_raw = (ui_in[0]?23:0)+(ui_in[1]?36:0)+(ui_in[2]?32:0)+(ui_in[3]?-9:0)+(ui_in[4]?3:0)+(ui_in[5]?-28:0)+(ui_in[6]?-30:0) + 9;
+
+    // --- ReLU LAYER ---
+    assign h0 = (h0_raw[8]) ? 9'd0 : h0_raw;
+    assign h2 = (h2_raw[8]) ? 9'd0 : h2_raw;
+    assign h3 = (h3_raw[8]) ? 9'd0 : h3_raw;
 
     // --- LAYER 2: New Output Weights + Intercepts (Scaled x100) ---
     assign e0 = (-6 * h0) + (-1 * h2) + (23 * h3) - 180;
@@ -40,35 +45,37 @@ module tt_um_example (
     reg [3:0] prediction;
 
     // Argmax Logic
-    always @(*) begin
-        max_val = e0;
-        prediction = 4'd0;
+    // Tournament Bracket - Round 1
+    wire signed [13:0] m01, m23, m45, m67, m89;
+    wire [3:0] p01, p23, p45, p67, p89;
+    
+    assign {m01, p01} = (e0 >= e1) ? {e0, 4'd0} : {e1, 4'd1};
+    assign {m23, p23} = (e2 >= e3) ? {e2, 4'd2} : {e3, 4'd3};
+    assign {m45, p45} = (e4 >= e5) ? {e4, 4'd4} : {e5, 4'd5};
+    assign {m67, p67} = (e6 >= e7) ? {e6, 4'd6} : {e7, 4'd7};
+    assign {m89, p89} = (e8 >= e9) ? {e8, 4'd8} : {e9, 4'd9};
 
-        if (e1 > max_val) begin max_val = e1; prediction = 4'd1; end
-        if (e2 > max_val) begin max_val = e2; prediction = 4'd2; end
-        if (e3 > max_val) begin max_val = e3; prediction = 4'd3; end
-        if (e4 > max_val) begin max_val = e4; prediction = 4'd4; end
-        if (e5 > max_val) begin max_val = e5; prediction = 4'd5; end
-        if (e6 > max_val) begin max_val = e6; prediction = 4'd6; end
-        if (e7 > max_val) begin max_val = e7; prediction = 4'd7; end
-        if (e8 > max_val) begin max_val = e8; prediction = 4'd8; end
-        if (e9 > max_val) begin max_val = e9; prediction = 4'd9; end 
-    end
+    // Round 2
+    wire signed [13:0] m03, m47;
+    wire [3:0] p03, p47;
+    
+    assign {m03, p03} = (m01 >= m23) ? {m01, p01} : {m23, p23};
+    assign {m47, p47} = (m45 >= m67) ? {m45, p45} : {m67, p67};
+
+    // Round 3 (Semi-Finals)
+    wire signed [13:0] m07;
+    wire [3:0] p07;
+    assign {m07, p07} = (m03 >= m47) ? {m03, p03} : {m47, p47};
+
+    // Round 4 (Finals)
+    wire [3:0] final_prediction;
+    assign final_prediction = (m07 >= m89) ? p07 : p89;
 
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             uo_out <= 8'b0;
-
-            h0 <= 9'd0;
-            h2 <= 9'd0;
-            h3 <= 9'd0;
         end else begin
-
-                // --- ReLU LAYER ---
-            h0 <= (h0_raw[8]) ? 9'd0 : h0_raw;
-            h2 <= (h2_raw[8]) ? 9'd0 : h2_raw;
-            h3 <= (h3_raw[8]) ? 9'd0 : h3_raw;
 
             uo_out <= {4'b0000, prediction}; 
         end
