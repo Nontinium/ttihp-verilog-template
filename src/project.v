@@ -16,18 +16,13 @@ module tt_um_example (
 
     // Bit-widths updated for experimental coefficients + intercepts
     wire signed [8:0] h0_raw, h2_raw, h3_raw;
-    wire signed [8:0] h0, h2, h3; // ReLU outputs
+    reg signed [8:0] h0, h2, h3; // ReLU outputs
     wire signed [13:0] e0, e1, e2, e3, e4, e5, e6, e7, e8, e9;
 
     // --- LAYER 1: New Hidden Weights + Intercepts (Scaled x10) ---
     assign h0_raw = (ui_in[0]?-3:0)+(ui_in[1]?-5:0)+(ui_in[3]?4:0)+(ui_in[4]?-1:0)+(ui_in[6]?-2:0);
     assign h2_raw = (ui_in[0]?28:0)+(ui_in[1]?19:0)+(ui_in[2]?-24:0)+(ui_in[3]?15:0)+(ui_in[4]?37:0)+(ui_in[5]?-37:0)+(ui_in[6]?29:0) + 5;
     assign h3_raw = (ui_in[0]?23:0)+(ui_in[1]?36:0)+(ui_in[2]?32:0)+(ui_in[3]?-9:0)+(ui_in[4]?3:0)+(ui_in[5]?-28:0)+(ui_in[6]?-30:0) + 9;
-
-    // --- ReLU LAYER ---
-    assign h0 = (h0_raw[8]) ? 9'd0 : h0_raw;
-    assign h2 = (h2_raw[8]) ? 9'd0 : h2_raw;
-    assign h3 = (h3_raw[8]) ? 9'd0 : h3_raw;
 
     // --- LAYER 2: New Output Weights + Intercepts (Scaled x100) ---
     assign e0 = (-6 * h0) + (-1 * h2) + (23 * h3) - 180;
@@ -64,7 +59,16 @@ module tt_um_example (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             uo_out <= 8'b0;
+
+            h0 <= 9'd0;
+            h2 <= 9'd0;
+            h3 <= 9'd0;
         end else begin
+
+                // --- ReLU LAYER ---
+            h0 <= (h0_raw[8]) ? 9'd0 : h0_raw;
+            h2 <= (h2_raw[8]) ? 9'd0 : h2_raw;
+            h3 <= (h3_raw[8]) ? 9'd0 : h3_raw;
 
             uo_out <= {4'b0000, prediction}; 
         end
