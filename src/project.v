@@ -14,29 +14,34 @@ module tt_um_example (
     assign uio_out = 0;
     assign uio_oe  = 0;
 
-    // Using 18-bit signed to ensure precision and prevent overflow
-    wire signed [7:0] h0, h1, h2, h3;
-    wire signed [11:0] e0, e1, e2, e3, e4, e5, e6, e7, e8, e9;
+    // Bit-widths updated for experimental coefficients + intercepts
+    wire signed [8:0] h0_raw, h2_raw, h3_raw;
+    wire signed [8:0] h0, h2, h3; // ReLU outputs
+    wire signed [13:0] e0, e1, e2, e3, e4, e5, e6, e7, e8, e9;
 
-    // LAYER 1: Hidden Neurons (Weights + Intercepts*10)
-    assign h0 = (ui_in[0]?24:0)+(ui_in[1]?-6:0)+(ui_in[2]?-15:0)+(ui_in[3]?18:0)+(ui_in[4]?-20:0)+(ui_in[5]?-9:0)+(ui_in[6]?9:0) - 2;
-    assign h1 = (ui_in[0]?-2:0)+(ui_in[1]?-21:0)+(ui_in[2]?15:0)+(ui_in[3]?-12:0)+(ui_in[4]?-11:0)+(ui_in[5]?-18:0)+(ui_in[6]?18:0) + 7;
-    assign h2 = (ui_in[0]? 6:0)+(ui_in[1]? 2:0)+(ui_in[2]?-5:0)+(ui_in[3]?-3:0)+(ui_in[4]? 7:0)+(ui_in[5]?-16:0)+(ui_in[6]?-17:0) + 8;
-    assign h3 = (ui_in[0]? 7:0)+(ui_in[1]?19:0)+(ui_in[2]?14:0)+(ui_in[3]?-13:0)+(ui_in[4]?-17:0)+(ui_in[5]?-10:0)+(ui_in[6]?-11:0) - 1;
+    // --- LAYER 1: New Hidden Weights + Intercepts (Scaled x10) ---
+    assign h0_raw = (ui_in[0]?-3:0)+(ui_in[1]?-5:0)+(ui_in[3]?4:0)+(ui_in[4]?-1:0)+(ui_in[6]?-2:0);
+    assign h2_raw = (ui_in[0]?28:0)+(ui_in[1]?19:0)+(ui_in[2]?-24:0)+(ui_in[3]?15:0)+(ui_in[4]?37:0)+(ui_in[5]?-37:0)+(ui_in[6]?29:0) + 5;
+    assign h3_raw = (ui_in[0]?23:0)+(ui_in[1]?36:0)+(ui_in[2]?32:0)+(ui_in[3]?-9:0)+(ui_in[4]?3:0)+(ui_in[5]?-28:0)+(ui_in[6]?-30:0) + 9;
 
-    // LAYER 2: Output Scores (Weights + Intercepts*100)
-    assign e0 = (-19 * h0) + (-18 * h1) + ( 9 * h2) + (-2 * h3) - 60;
-    assign e1 = (-13 * h0) + (  2 * h1) + ( 8 * h2) + ( 9 * h3) + 140;
-    assign e2 = ( 13 * h0) + (-11 * h1) + (12 * h2) + (-10 * h3) - 40;
-    assign e3 = ( 20 * h0) + ( 14 * h1) + ( 5 * h2) + ( 10 * h3) + 50;
-    assign e4 = (-17 * h0) + (  9 * h1) + (-14 * h2) + ( 2 * h3) + 20;
-    assign e5 = (  7 * h0) + ( 15 * h1) + (-17 * h2) + (-6 * h3) - 70;
-    assign e6 = ( -8 * h0) + (  8 * h1) + ( -9 * h2) + (-21 * h3) + 50;
-    assign e7 = (  6 * h0) + (  1 * h1) + (  9 * h2) + ( 20 * h3) - 10;
-    assign e8 = ( -9 * h0) + (-12 * h1) + (-12 * h2) + ( -8 * h3) - 20;
-    assign e9 = ( 10 * h0) + ( -9 * h1) + (-15 * h2) + ( 10 * h3) - 110;
+    // --- ReLU LAYER ---
+    assign h0 = (h0_raw[8]) ? 9'd0 : h0_raw;
+    assign h2 = (h2_raw[8]) ? 9'd0 : h2_raw;
+    assign h3 = (h3_raw[8]) ? 9'd0 : h3_raw;
 
-    reg signed [11:0] max_val;
+    // --- LAYER 2: New Output Weights + Intercepts (Scaled x100) ---
+    assign e0 = (-6 * h0) + (-1 * h2) + (23 * h3) - 180;
+    assign e1 = ( 5 * h0) + (-38 * h2) + (32 * h3) - 120;
+    assign e2 = ( 5 * h0) + ( 36 * h2) + (-30 * h3) - 280;
+    assign e3 = ( 3 * h0) + ( 17 * h2) + ( 8 * h3) - 350;
+    assign e4 = (-3 * h0) + (-27 * h2) + (20 * h3) + 380;
+    assign e5 = (-4 * h0) + ( 23 * h2) + (-29 * h3) + 360;
+    assign e6 = ( 3 * h0) + ( 36 * h2) + (-48 * h3) - 30;
+    assign e7 = (-1 * h0) + (-17 * h2) + (31 * h3) - 340;
+    assign e8 = (-6 * h0) + ( 28 * h2) + (-13 * h3) - 90;
+    assign e9 = (-1 * h0) + ( 7 * h2) + ( 4 * h3) + 350;
+
+    reg signed [13:0] max_val;
     reg [3:0] prediction;
 
     // Argmax Logic
