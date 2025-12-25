@@ -2,7 +2,7 @@
 
 module tt_um_example (
     input  wire [7:0] ui_in,    
-    output reg  [7:0] uo_out,   
+    output reg [7:0] uo_out,   
     input  wire [7:0] uio_in,   
     output wire [7:0] uio_out,  
     output wire [7:0] uio_oe,   
@@ -40,28 +40,32 @@ module tt_um_example (
     reg [3:0] prediction;
 
     // Argmax Logic
+    always @(*) begin
+        max_val = e0;
+        prediction = 4'd0;
+
+        if (e1 > max_val) begin max_val = e1; prediction = 4'd1; end
+        if (e2 > max_val) begin max_val = e2; prediction = 4'd2; end
+        if (e3 > max_val) begin max_val = e3; prediction = 4'd3; end
+        if (e4 > max_val) begin max_val = e4; prediction = 4'd4; end
+        if (e5 > max_val) begin max_val = e5; prediction = 4'd5; end
+        if (e6 > max_val) begin max_val = e6; prediction = 4'd6; end
+        if (e7 > max_val) begin max_val = e7; prediction = 4'd7; end
+        if (e8 > max_val) begin max_val = e8; prediction = 4'd8; end
+        if (e9 > max_val) begin max_val = e9; prediction = 4'd9; end 
+    end
+
+
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             uo_out <= 8'b0;
         end else begin
-            max_val = e0;
-            prediction = 4'd0;
-
-            if (e1 > max_val) begin max_val = e1; prediction = 4'd1; end
-            if (e2 > max_val) begin max_val = e2; prediction = 4'd2; end
-            if (e3 > max_val) begin max_val = e3; prediction = 4'd3; end
-            if (e4 > max_val) begin max_val = e4; prediction = 4'd4; end
-            if (e5 > max_val) begin max_val = e5; prediction = 4'd5; end
-            if (e6 > max_val) begin max_val = e6; prediction = 4'd6; end
-            if (e7 > max_val) begin max_val = e7; prediction = 4'd7; end
-            if (e8 > max_val) begin max_val = e8; prediction = 4'd8; end
-            if (e9 > max_val) begin max_val = e9; prediction = 4'd9; end
 
             uo_out <= {4'b0000, prediction}; 
         end
     end
 
-    // Use bits that would otherwise be 'unused' to satisfy the linter
     wire _unused = &{ena, ui_in[7], uio_in, 1'b0};
 
+    
 endmodule
